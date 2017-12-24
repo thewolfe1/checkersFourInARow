@@ -160,6 +160,9 @@ def game_intro():
         update_game()      
 
 def checkers():
+    '''
+    activates the checkers window
+    '''
     gameDisplay.fill(white)
     gameDisplay.blit(img,(0,0))
     text_settings(gameDisplay, 100, 50, 100, 100, "player 1", white, 20)
