@@ -9,6 +9,8 @@ black = (0,0,0)
 white = (255,255,255)
 red = (200,0,0)
 blue = (0,70,250)
+gold = (227,207,87)
+silver = (193,205,205)
 
 img =pygame.image.load('Green-School-Board.png')
 img2 =pygame.image.load('arrows.png')
@@ -97,8 +99,18 @@ boared_arr=[[0,2,0,2,0,2,0,2],
             [0,1,0,1,0,1,0,1],
             [1,0,1,0,1,0,1,0]]
 
+reset_boared=[[0,2,0,2,0,2,0,2],
+            [2,0,2,0,2,0,2,0],
+            [0,2,0,2,0,2,0,2],
+            [0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0],
+            [1,0,1,0,1,0,1,0],
+            [0,1,0,1,0,1,0,1],
+            [1,0,1,0,1,0,1,0]]
+
 options=[]
 choice=False
+count=0
 
 gameDisplay = pygame.display.set_mode((display_width,display_height))
 pygame.display.set_caption("2 games in 1")
@@ -136,7 +148,6 @@ def button(display,x,y,z,k,txt,action=None,size=40):
                 checkers_instructions()
             elif action== "connect_four_instructions":
                 connect_four_instructions()
-                
     else:
         text_settings(display,x,y,z,k,txt,white,size)
 
@@ -154,6 +165,7 @@ def game_intro():
             if event.type == pygame.QUIT:
                 terminate_game()
         reset()
+        reset_checkers()
         button(gameDisplay, 300, 200, 200, 50,"checkers","checkers")
         button(gameDisplay, 300, 270, 200, 50,"connect four","connect four") 
         button(gameDisplay, 300, 340, 200, 50,"instructions","instructions") 
@@ -173,29 +185,103 @@ def checkers():
     boared_checkers()
     global options
     global choice
+    global count
     turn=randint(1,2)
-    
+    text_settings(gameDisplay, 100, 200, 100, 100, "turn:", white, 20)
+    circle(white, 215, 98, 10, 10)
+    circle(blue, 215, 137, 10, 10)
+   
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 terminate_game()
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if turn==1:
-                    if mark_player(choice)==-1:
+                    mark=mark_player(choice)
+                    if mark==-1:
                         choice=True
                         options=player_moves()
+                    elif mark==-3:
+                        choice=True
+                        options=player_king_moves()
                     else:
                         choice=False
                     if make_move(options):
+                        update_king()
                         turn=change(turn)
+            if winner()==1:
+                game_over_checkers(1)
+            if winner()==2:
+                game_over_checkers(2)
+            if turn==2:
+                circle(blue, 150, 300, 30, 30)
+            else:
+                circle(white, 150, 300, 30, 30)
             if turn==2:
                 if run_ai():
                     turn=change(turn)
-                
+            if count<15 and check_draw_start():
+                count+=1
+            if count==15:
+                game_over_checkers(0)
+            
         button(gameDisplay, 70, 470, 70, 50, "menu", "menu")    
         update_game()
         clock.tick(60)
+
+def game_over_checkers(player):
+    gameDisplay.fill(black)
+    gameDisplay.blit(img,(0,0))
+    reset_checkers()
+    while True:
+        button(gameDisplay, 200, 300, 90, 50, "menu", "menu")
+        button(gameDisplay, 450, 300, 230, 50, "play again", "checkers")
+        if player==1:
+            text_settings(gameDisplay, 350, 100, 100, 100, "player 1 is the winner!!!", white, 50)
+        elif player==2:
+            text_settings(gameDisplay, 350, 100, 100, 100, "player 2 is the winner!!!", white, 50)
+        elif player==0:
+            text_settings(gameDisplay, 350, 100, 100, 100, "its a draw!!!", white, 50) 
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                terminate_game()
+        update_game()
+        clock.tick(60)
         
+        
+def check_draw_start():
+    if (check_one_player(1) or check_one_player(3)) and (check_one_player(2) or check_one_player(4)):
+        return True
+    return False        
+        
+def check_one_player(player):
+    count=0
+    for i in range(8):
+        for j in range(8):
+            if boared_arr[i][j]==player:
+                count+=1
+    if count==1:
+        return True
+    return False
+
+def reset_checkers():
+    for i in range(8):
+        for j in range(8):
+            boared_arr[i][j]=reset_boared[i][j]
+    
+def winner():
+    if check_win(2) and check_win(4):
+        return 1
+    if check_win(1) and check_win(3):
+        return 2
+    return -1
+        
+def check_win(player):
+    for i in range(8):
+        for j in range(8):
+            if boared_arr[i][j]==player:
+                return False
+    return True
 
 def clicked_piece():
     '''
@@ -252,15 +338,15 @@ def check_move_ai(p):
     #working with matrix p[1]-x and p[0]-y
     if l1<=p[0]<=l2 and l1<=p[1]<=l2:
         if  boared_arr[p[1]][p[0]]!=0:
-            if l1<=h1[0]<=l2:
+            if l1<=h1[0]<=l2 and l1<=h1[1]<=l2:
                 if boared_arr[h1[1]][h1[0]]==0:
                     x=h1 
-            if l1<=h2[0]<=l2:
+            if l1<=h2[0]<=l2 and l1<=h2[1]<=l2:
                 if boared_arr[h2[1]][h2[0]]==0:
                     y=h2
     return (x,y)
     
-def check_eat(p):
+def check_eat(p,player=2):
     '''
     check if a eat is avilable  for player includeing eating option and return the index where the move can be preformed 
     '''
@@ -270,24 +356,24 @@ def check_eat(p):
     h1,h2=(p[0]-1,p[1]-1),(p[0]+1,p[1]-1)
     nh1,nh2=(p[0]-2,p[1]-2),(p[0]+2,p[1]-2)
     if l1<=nh1[0]<=l2 and l1<=nh1[1]<=l2 and l1<=h1[0]<=l2 and l1<=h1[1]<=l2:
-        if boared_arr[h1[1]][h1[0]]==2 and boared_arr[nh1[1]][nh1[0]]==0:
+        if boared_arr[h1[1]][h1[0]]==player and boared_arr[nh1[1]][nh1[0]]==0:
             x=nh1
     if l1<=nh2[0]<=l2 and l1<=nh2[1]<=l2 and l1<=h2[0]<=l2 and l1<=h2[1]<=l2:
-        if boared_arr[h2[1]][h2[0]]==2 and boared_arr[nh2[1]][nh2[0]]==0:
+        if boared_arr[h2[1]][h2[0]]==player and boared_arr[nh2[1]][nh2[0]]==0:
             y=nh2
     return(x,y)
 
-def check_eat_ai(p):
+def check_eat_ai(p,player=1):
     x,y=(-1,0),(-1,0)
     l1,l2=0,7
     #h1 is left,h2 is right
     h1,h2=(p[0]-1,p[1]+1),(p[0]+1,p[1]+1)
     nh1,nh2=(p[0]-2,p[1]+2),(p[0]+2,p[1]+2)
     if l1<=nh1[0]<=l2 and l1<=nh1[1]<=l2 and l1<=h1[0]<=l2 and l1<=h1[1]<=l2:
-        if boared_arr[h1[1]][h1[0]]==1 and boared_arr[nh1[1]][nh1[0]]==0:
+        if boared_arr[h1[1]][h1[0]]==player and boared_arr[nh1[1]][nh1[0]]==0:
             x=nh1
     if l1<=nh2[0]<=l2 and l1<=nh2[1]<=l2 and l1<=h2[0]<=l2 and l1<=h2[1]<=l2:
-        if boared_arr[h2[1]][h2[0]]==1 and boared_arr[nh2[1]][nh2[0]]==0:
+        if boared_arr[h2[1]][h2[0]]==player and boared_arr[nh2[1]][nh2[0]]==0:
             y=nh2
     return(x,y)
 
@@ -314,7 +400,7 @@ def player_king_moves():
     k=clicked_piece()
     options=player_moves()
     m=check_move_ai(k)
-    e=check_eat_ai(k)
+    e=check_eat_ai(k,2)
     if m[0][0]!=-1:
         options.append(('moveld',m[0]))
     if m[1][0]!=-1:
@@ -324,6 +410,14 @@ def player_king_moves():
     if e[1][0]!=-1:
         options.append(('eatrd',e[1]))    
     return options
+
+def update_king():
+    for i in range(8):
+        if boared_arr[0][i]==1:
+            boared_arr[0][i]=3
+            circle(gold, piece_arr[0][i][0], piece_arr[0][i][1], 20, 0)
+            return True
+    return False
 
 def random_pieace():
     random.seed()
@@ -348,10 +442,31 @@ def ai_moves():
         options.append(('eatrd',e[1]))    
     return options
 
+def ai_king_moves():
+    k=random_pieace()
+    options=ai_moves()
+    m=check_move(k)
+    e=check_eat(k)
+    if m[0][0]!=-1:
+        options.append(('move',m[0]))
+    if m[1][0]!=-1:
+        options.append(('move',m[1]))
+    if e[0][0]!=-1:
+        options.append(('eatl',e[0]),1)
+    if e[1][0]!=-1:
+        options.append(('eatr',e[1]),1)    
+    return options
+    
+    
 def run_ai():
     k=ai_moves()
+    count=0
     while len(k)==1:
+        if count==13:
+            return True
         k=ai_moves()
+        count+=1
+        
     if k[1][0]=='eatld' or k[1][0]=='eatrd':
         move_ai(k[0],k[1][1],k[1][0])
         return True
@@ -415,18 +530,29 @@ def mark_player(choice):
     mark the player if there is an option to move include eat
     '''
     options=player_moves()
+    king_options=player_king_moves()
     i=piece_arr[options[0][1]][options[0][0]][0]
     j=piece_arr[options[0][1]][options[0][0]][1]
-    
+    print(king_options)
     if len(options)>1:
         if boared_arr[options[0][1]][options[0][0]]==1 and not choice:
             circle(red,i,j,20,0)
             boared_arr[options[0][1]][options[0][0]]=-1
             return -1
+        
         elif boared_arr[options[0][1]][options[0][0]]==-1:
             circle(white,i,j,20,0)
             boared_arr[options[0][1]][options[0][0]]=1
             return 1
+    if len(king_options):
+        if boared_arr[king_options[0][1]][king_options[0][0]]==3 and not choice:
+            circle(red,i,j,20,0)
+            boared_arr[king_options[0][1]][king_options[0][0]]=-3
+            return -3
+        elif boared_arr[king_options[0][1]][king_options[0][0]]==-3:
+            circle(gold,i,j,20,0)
+            boared_arr[king_options[0][1]][king_options[0][0]]=3
+            return 3
     return None
            
 
@@ -440,62 +566,91 @@ def make_move(options):
     size=len(options)
     l1,l2=0,7
     i=1
-    if l1<=options[0][0]<=l2 and l1<=options[0][1]<=l2:
-        if boared_arr[options[0][1]][options[0][0]]==-1:
-            while i<size:
-                if k==options[i][1]:
-                    if options[i][0]=='movel':
-                        move(options[0],k,'move')
-                        return True
-                    elif options[i][0]=='mover':
-                        move(options[0],k,'move')
-                        return True
-                    elif options[i][0]=='eatl':
-                        move(options[0],k,'eatl')
-                        return True
-                    elif options[i][0]=='eatr':
-                        move(options[0],k,'eatr')
-                        return True
-                i+=1
+    if size>0:
+        if l1<=options[0][0]<=l2 and l1<=options[0][1]<=l2:
+            if boared_arr[options[0][1]][options[0][0]]==-1:
+                while i<size:
+                    if k==options[i][1]:
+                        if options[i][0]=='movel':
+                            move(options[0],k,'move')
+                            return True
+                        elif options[i][0]=='mover':
+                            move(options[0],k,'move')
+                            return True
+                        elif options[i][0]=='eatl':
+                            move(options[0],k,'eatl')
+                            return True
+                        elif options[i][0]=='eatr':
+                            move(options[0],k,'eatr')
+                            return True
+                    i+=1
+            if boared_arr[options[0][1]][options[0][0]]==-3:
+                while i<size:
+                    if k==options[i][1]:
+                        if options[i][0]=='movel':
+                            move(options[0],k,'move',3,gold)
+                            return True
+                        elif options[i][0]=='mover':
+                            move(options[0],k,'move',3,gold)
+                            return True
+                        elif options[i][0]=='eatl':
+                            move(options[0],k,'eatl',3,gold)
+                            return True
+                        elif options[i][0]=='eatr':
+                            move(options[0],k,'eatr',3,gold)
+                            return True
+                        if options[i][0]=='moveld':
+                            move(options[0],k,'move',3,gold)
+                            return True
+                        elif options[i][0]=='moverd':
+                            move(options[0],k,'move',3,gold)
+                            return True
+                        elif options[i][0]=='eatld':
+                            move(options[0],k,'eatld',3,gold)
+                            return True
+                        elif options[i][0]=='eatrd':
+                            move(options[0],k,'eatrd',3,gold)
+                            return True
+                    i+=1
     return False
 
-def move(i,n,msg):
+def move(i,n,msg,player=1,color=white):
     '''
     set the piece on the boared after selected place and delete last place of piece
     '''
     if msg=='move':
-        boared_arr[n[1]][n[0]]=1
+        boared_arr[n[1]][n[0]]=player
         boared_arr[i[1]][i[0]]=0
-        circle(white, piece_arr[n[1]][n[0]][0], piece_arr[n[1]][n[0]][1], 20, 0)
+        circle(color, piece_arr[n[1]][n[0]][0], piece_arr[n[1]][n[0]][1], 20, 0)
         sqrt(black, sqr_arr[i[1]][i[0]][0],sqr_arr[i[1]][i[0]][1],45,45)
     elif msg=='eatl':
-        boared_arr[n[1]][n[0]]=1
+        boared_arr[n[1]][n[0]]=player
         boared_arr[i[1]][i[0]]=0
         boared_arr[i[1]-1][i[0]-1]=0
         sqrt(black, sqr_arr[i[1]][i[0]][0],sqr_arr[i[1]][i[0]][1],45,45)
         sqrt(black, sqr_arr[i[1]-1][i[0]-1][0],sqr_arr[i[1]-1][i[0]-1][1],45,45)
-        circle(white, piece_arr[n[1]][n[0]][0], piece_arr[n[1]][n[0]][1], 20, 0)
+        circle(color, piece_arr[n[1]][n[0]][0], piece_arr[n[1]][n[0]][1], 20, 0)
     elif msg=='eatr':
-        boared_arr[n[1]][n[0]]=1
+        boared_arr[n[1]][n[0]]=player
         boared_arr[i[1]][i[0]]=0
         boared_arr[i[1]-1][i[0]+1]=0
         sqrt(black, sqr_arr[i[1]][i[0]][0],sqr_arr[i[1]][i[0]][1],45,45)
         sqrt(black, sqr_arr[i[1]-1][i[0]+1][0],sqr_arr[i[1]-1][i[0]+1][1],45,45)
-        circle(white, piece_arr[n[1]][n[0]][0], piece_arr[n[1]][n[0]][1], 20, 0)
+        circle(color, piece_arr[n[1]][n[0]][0], piece_arr[n[1]][n[0]][1], 20, 0)
     elif msg=='eatld':
-        boared_arr[n[1]][n[0]]=1
+        boared_arr[n[1]][n[0]]=player
         boared_arr[i[1]][i[0]]=0
         boared_arr[i[1]+1][i[0]-1]=0
         sqrt(black, sqr_arr[i[1]][i[0]][0],sqr_arr[i[1]][i[0]][1],45,45)
         sqrt(black, sqr_arr[i[1]+1][i[0]-1][0],sqr_arr[i[1]+1][n[0]-1][1],45,45)
-        circle(white, piece_arr[n[1]][n[0]][0], piece_arr[n[1]][n[0]][1], 20, 0)    
+        circle(color, piece_arr[n[1]][n[0]][0], piece_arr[n[1]][n[0]][1], 20, 0)    
     elif msg=='eatrd':
-        boared_arr[n[1]][n[0]]=1
+        boared_arr[n[1]][n[0]]=player
         boared_arr[i[1]][i[0]]=0
         boared_arr[i[1]+1][i[0]+1]=0
         sqrt(black, sqr_arr[i[1]][i[0]][0],sqr_arr[i[1]][i[0]][1],45,45)
         sqrt(black, sqr_arr[i[1]+1][i[0]+1][0],sqr_arr[i[1]+1][i[0]+1][1],45,45)
-        circle(white, piece_arr[n[1]][n[0]][0], piece_arr[n[1]][n[0]][1], 20, 0)   
+        circle(color, piece_arr[n[1]][n[0]][0], piece_arr[n[1]][n[0]][1], 20, 0)   
 
 def boared_checkers():
     '''
