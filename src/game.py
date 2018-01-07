@@ -1105,8 +1105,8 @@ def terminate_game():
     
 game_intro()                        
 terminate_game()
-'''
+
 if __name__=='__game__':
     game_intro()                        
     terminate_game()
-'''                  
+                  
